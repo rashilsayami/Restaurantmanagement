@@ -1,33 +1,35 @@
 require('dotenv').config();
 const express = require('express');
-const app = express();
+const app = express(); // Initialize express app
+const globalErrorHandler = require('./middlewares/globalErrorHandler');
 
+const { sequelize, connectDB } = require('./config/database');
 const config = require('./config/config');
-const { connectDB } = require('./config/database');
-const globalErrorHandler = require('./middlewares/globalErrorHandler'); // Add this!
-
 const PORT = config.port;
 
-connectDB(); // DB connection
+// Database connection
+connectDB();
 
-// middlewares
-app.use(express.json());  // parse incoming  request in JSON
+sequelize.sync()
+  .then(() => console.log('All models were synchronized successfully.'))
+  .catch(err => console.error('Error syncing models:', err));
 
-app.use(express.json()); // Add if needed
+// Middleware
+app.use(express.json());
 
-// Define route root end point
-app.get('/', (req, res) => {     
-
-    res.json({ message: 'this is pos server!' });
+// Default test route
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running on MySQL!' });
 });
 
+// Import routes
+app.use('/api/user', require('./routes/userRoute'));
 
-// other end points
-app.use("/api/user",require('./routes/userRoute'));
-// Global error handler
+// Global error handler if you have one
+
 app.use(globalErrorHandler);
 
-// Start server
+// Start the server
 app.listen(PORT, () => {
-  console.log(`POS server is running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
