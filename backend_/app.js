@@ -1,11 +1,14 @@
 require('dotenv').config();
 const express = require('express');
-const app = express(); // Initialize express app
+const session = require('express-session');
+const SequelizeStore = require('connect-session-sequelize')(session.Store); // For storing sessions in DB
 const globalErrorHandler = require('./middlewares/globalErrorHandler');
 
 const { sequelize, connectDB } = require('./config/database');
 const config = require('./config/config');
 const PORT = config.port;
+
+const app = express(); // Initialize express app
 
 // Database connection
 connectDB();
@@ -17,6 +20,22 @@ sequelize.sync()
 // Middleware
 app.use(express.json());
 
+// ------------------- SESSION CONFIG -------------------
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your_secret_key', // Use .env secret key in production!
+  resave: false,
+  saveUninitialized: false,
+  store: new SequelizeStore({
+    db: sequelize,
+  }),
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    httpOnly: true,
+    secure: false // Set to true in production with HTTPS
+  }
+}));
+// ------------------------------------------------------
+
 // Default test route
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running on MySQL!' });
@@ -25,8 +44,7 @@ app.get('/', (req, res) => {
 // Import routes
 app.use('/api/user', require('./routes/userRoute'));
 
-// Global error handler if you have one
-
+// Global error handler
 app.use(globalErrorHandler);
 
 // Start the server
