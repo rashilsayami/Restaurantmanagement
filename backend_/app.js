@@ -43,6 +43,8 @@ app.get('/', (req, res) => {
 
 // Import routes
 app.use('/api/user', require('./routes/userRoute'));
+app.use('/api/order', require('./routes/orderRoute'));
+app.use('/api/inventory', require('./routes/inventoryRoute'));
 
 // Global error handler
 app.use(globalErrorHandler);

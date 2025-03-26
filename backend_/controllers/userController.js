@@ -91,4 +91,101 @@ const logout = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, logout };
+// Get current logged-in user data
+const getCurrentUser = async (req, res, next) => {
+  try {
+    if (!req.session.user) {
+      throw createHttpError(401, "Please login to access this resource");
+    }
+
+    const user = await User.findOne({
+      where: { id: req.session.user.id },
+      attributes: ['id', 'name', 'email', 'phone', 'role', 'createdAt', 'updatedAt']
+    });
+
+    if (!user) {
+      throw createHttpError(404, "User not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get user by ID (Admin only)
+const getUserById = async (req, res, next) => {
+  try {
+    // Check if requester is admin
+    if (req.session.user?.role !== 'admin') {
+      throw createHttpError(403, "Access denied. Admin only resource");
+    }
+
+    const { userId } = req.params;
+
+    const user = await User.findOne({
+      where: { id: userId },
+      attributes: ['id', 'name', 'email', 'phone', 'role', 'createdAt', 'updatedAt']
+    });
+
+    if (!user) {
+      throw createHttpError(404, "User not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all users (Admin only)
+const getAllUsers = async (req, res, next) => {
+  try {
+    // Check if requester is admin
+    if (req.session.user?.role !== 'admin') {
+      throw createHttpError(403, "Access denied. Admin only resource");
+    }
+
+    // Add pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const users = await User.findAndCountAll({
+      attributes: ['id', 'name', 'email', 'phone', 'role', 'createdAt', 'updatedAt'],
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users: users.rows,
+        pagination: {
+          total: users.count,
+          pages: Math.ceil(users.count / limit),
+          currentPage: page,
+          perPage: limit
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { 
+  register, 
+  login, 
+  logout, 
+  getCurrentUser, 
+  getUserById, 
+  getAllUsers 
+};
